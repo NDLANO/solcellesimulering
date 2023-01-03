@@ -1,0 +1,37 @@
+[
+    {
+        "Id": 1,
+        "Tittel": "Høyttaler",
+        "Bilde": "./icons/speaker-sheet0.png",
+        "Forbruk": "20", 
+        "Checked": false
+    },
+    {
+        "Id": 2,
+        "Tittel": "Klokkeradio",
+        "Bilde": "./icons/clock-sheet0.png",
+        "Forbruk": "4",
+        "Checked": false
+    },
+    {
+        "Id": 3,
+        "Tittel": "Sparepære",
+        "Bilde": "./icons/light-sheet0.png",
+        "Forbruk": "11",
+        "Checked": false
+    },
+    {
+        "Id": 4,
+        "Tittel": "TV",
+        "Bilde": "./icons/tvvv-sheet0.png",
+        "Forbruk": "40",
+        "Checked": false
+    },
+    {
+        "Id": 5,
+        "Tittel": "Laptop",
+        "Bilde": "./icons/lapi-sheet0.png",
+        "Forbruk": "35",
+        "Checked": false
+    }
+]

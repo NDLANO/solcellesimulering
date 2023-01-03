@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Solcelle styring</title>
+  <link rel="stylesheet" href="./plugins/bootstrap/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet">
+  <link href="https://use.fontawesome.com/releases/v5.0.2/css/all.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="./css/default.css?id=11">
+
+  <script src="./js/jquery-3.1.1.min.js"></script>
+  <script src="./plugins/bootstrap/js/bootstrap.min.js"></script>
+
+  <script src="./js/functionlib.js"></script>
+  <script src="./languages/default.js" type="text/javascript"></script>
+</head>
+<body>
+  <button type="button" id="cmdShowItemList">
+    <i class="fas fa-bars"></i>
+  </button>
+  <div id="app">
+    <div id="MedExploreSolarCellApp">
+      <div id="mainWrapper" class="setfullheight">
+        <div class="column left setfullheight setsizeofleft">
+          <div class="ItemListWrapper setfullheight">
+            <div class="ItemList">
+              <ul id="ULItemList"></ul>
+            </div>
+            <div class="ItemListFooter"></div>
+          </div>
+        </div>
+        <div class="column right setfullheight setsizeofright">
+          <div class="SolarCellProdWrapper setfullheight">
+            <div class="fullHeight">
+              <img ref="imagegrass" class="grass responsive bottom" src="./icons/bg2-sheet0.png" alt="Grass">
+              <img ref="imagesun" id="sun" src="./icons/Heraldic_Sun.svg.png" alt="Sun">
+              <canvas id="myCanvas" width="200" height="100"></canvas>
+              <canvas id="solarcellpanelcontainer" class="first">
+            </div>
+          </div>
+          <div class="AdjustWrapper">
+            <div class="AdjustAngle clearfix">
+              <div class="Angle float-right">
+                <div id="labelVinkel"></div>
+                <input type="text" disabled id="CurrentAngle" class="fullbutspaceleft text-center" />
+              </div>
+              <div class="Time float-right">
+                <div id="labelTid"></div>
+                <input type="text" disabled id="CurrentTime" class="fullbutspaceright text-center" />
+              </div>
+
+              <div class="Arrows float-right">
+                <div>
+                  <i class="fas fa-caret-square-up cmdUpdateAngle" data-dir="up"></i>
+                </div>
+                <div>
+                  <i class="fas fa-caret-square-down cmdUpdateAngle" data-dir="down"></i>
+                </div>
+              </div>
+            </div>
+            <div class="AdjustEffect">
+              <div class="Area clearfix">
+                <div class="AreaLabel"></div>
+                <div class="AreaInputText">
+                  <input type="text" disabled id="Area" class="fullwidth text-center" />
+                </div>
+              </div>
+              <div class="AreaSlider">
+                <input type="range" name="" id="AreaSlider" min="0" max="12" step="1"  value="1" class="fullwidth" />
+              </div>
+
+              <div class="Effect clearfix">
+                <div class="EffectLabel"></div>
+                <div class="EffectInputText">
+                  <input type="text" disabled id="Effect" class="fullwidth text-center" />
+                </div>
+
+              </div>
+              <div class="EffectSlider">
+                <input type="range" name="" id="EffectSlider" min="0" max="100" step="1" value="16" class="fullwidth" />
+              </div>
+            </div>
+          </div>
+          <div class="ResultWrapper clearfix">
+            <div class="wrapper clearfix">
+              <div class="UsageLabel float-left" id="labelForbruk"></div>
+              <div class="input float-right">
+                <input type="text" id="inputTotalUsage" class="text-center fullwidth" disabled />
+              </div>
+            </div>
+            <div class="ResultLabel float-left">Produksjon&nbsp;</div>
+            <div class="ResultInputText float-right">
+              <input type="text" disabled id="CurrentProdText" class="fullwidth text-center" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <button type="button" id="cmdShowInstructions" data-toggle="modal" data-target="#myModal"></button>
+  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <h4 class="modal-title labelInstructionsTitle" id="myModalLabel"></h4>
+        </div>
+        <div class="modal-body labelInstructionsContent">
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="text/javascript">
+    var PageData = {
+      SolarCellProdChart: [],
+      SolarCellUsageItems: [],
+      height: window.innerHeight,
+      width: window.innerWidth,
+      sizeOfLeft: 300,
+      CurrentAngle: 90,
+      CurrentArea: 1,
+      CurrentEffect: 16,
+      CurrentProd: 128,
+      CurrentUsage: 0,
+      CurrentSunX: '50%',
+      CurrentSunY: '55%',
+      MobileMode: false,
+      DefaultLang: 'nb-NO'
+    };
+
+    $(window).ready(function () {
+      $.ajaxSetup({
+        cache: false
+      });
+
+      $.getJSON('./json/SolarCellProdChart.json', function (data) {
+        PageData.SolarCellProdChart = data;
+        populateCurrentAngle();
+        populateCurrentArea();
+        populateCurrentEffect();
+      });
+
+      $.getJSON('./json/SolarCellUsageItems.json', function (data) {
+        PageData.SolarCellUsageItems = data;
+        populateItemList();
+        populateCurrentUsage();
+        populateCurrentProd();
+      });
+    });
+
+    $('body').on('updateList', populateItemList);
+    $('body').on('updateTotalUsage', populateCurrentUsage);
+    $('body').on('updateTotalProd', populateCurrentProd);
+    $('body').on('updateCurrentAngle', populateCurrentAngle);
+    $('body').on('updateCurrentArea', populateCurrentArea);
+    $('body').on('updateCurrentEffect', populateCurrentEffect);
+    $('#AreaSlider').on('input', updateArea);
+    $('#AreaSlider').on('change', updateArea);
+    $('#EffectSlider').on('input', updateEffect);
+    $('#EffectSlider').on('change', updateEffect);
+    $('.cmdUpdateAngle').on('click', updateAngle);
+    $('#cmdShowItemList').on('click', toggleItemList);
+    setSizes();
+    setSliders();
+    $('#myModal').modal('show')
+    $(window).resize(setSizes);
+
+    function setSizes() {
+      // clear all..
+      $('.setfullheight').css({
+        height: "auto"
+      });
+      $('.setsizeofleft, .setsizeofright').css({
+        width: "auto"
+      });
+
+      $('canvas').attr({
+        width: 100,
+        height: 100
+      })
+
+      PageData.height = window.innerHeight;
+      PageData.width = window.innerWidth;
+
+      if (PageData.width < 768) {
+        PageData.MobileMode = true;
+      } else if (PageData.MobileMode == true) {
+        PageData.MobileMode = false;
+        $('.column.left').show();
+        $('.column.left').removeClass('absolute');
+        $('#cmdShowItemList').removeClass("active showing");
+        $('#cmdShowInstructions').show();
+        $('.ResultWrapper').css({
+          left: 16
+        })
+      }
+      $('.setfullheight').css({
+        height: PageData.height
+      });
+      $('.setsizeofleft').css({
+        width: PageData.sizeOfLeft
+      });
+      if (PageData.MobileMode == false) {
+        $('.setsizeofright').css({
+          width: PageData.width - PageData.sizeOfLeft
+        })
+
+      } else {
+        $('.setsizeofright').css({
+          width: PageData.width
+        });
+        $('.column.left').hide();
+        $('.column.left').addClass('absolute');
+        $('#cmdShowItemList').addClass("active");
+      }
+
+      populateItemList();
+
+      setSunPosition();
+      setInstructionsButtonPos();
+
+    }
+
+    function setInstructionsButtonPos() {
+      var CurrentSpace = PageData.width;
+      var Offset = 16;
+      if (PageData.MobileMode == false) {
+        CurrentSpace = CurrentSpace - 300;
+        Offset = 316;
+      }
+      if (CurrentSpace > 600) {
+        $('#cmdShowInstructions').css({
+          left: (CurrentSpace / 2) + Offset
+        });
+
+        if ($('#cmdShowInstructions').hasClass('tinyspace')) {
+          $('#cmdShowInstructions').removeClass('tinyspace')
+        }
+      } else {
+        $('#cmdShowInstructions').addClass('tinyspace')
+        $('#cmdShowInstructions').css({
+          left: Offset
+        });
+      }
+
+    }
+
+    function toggleItemList() {
+      if ($('#cmdShowItemList').hasClass("showing")) {
+        $('.column.left').slideUp();
+        $('#cmdShowItemList').removeClass("showing")
+        if (PageData.width > 450) {
+          $('#cmdShowInstructions').show();
+          $('.ResultWrapper').css({
+            left: 16
+          })
+        } else {
+          // $('.ItemListWrapper').css({height: PageData.height});
+        }
+      } else {
+        $('.column.left').slideDown();
+        populateItemList();
+        $('#cmdShowItemList').addClass("showing");
+        console.log(PageData.width)
+        if (PageData.width > 450) {
+          $('#cmdShowInstructions').hide();
+          $('.ResultWrapper').css({
+            left: 316
+          })
+        } else {
+          $('.ItemListWrapper').css({
+            height: PageData.width
+          });
+        }
+
+      }
+    }
+
+    function setSliders() {
+      $('#EffectSlider').val(PageData.CurrentEffect);
+      $('#AreaSlider').val(PageData.CurrentArea);
+    }
+
+    function updateAngle() {
+      var currentDir = $(this).attr('data-dir');
+      var CurrentAngle = PageData.CurrentAngle;
+      // let CurrentId = Id;
+      if (currentDir === 'down') {
+        CurrentAngle -= 15;
+      } else {
+        CurrentAngle += 15;
+      }
+      var tmpList = $.grep(PageData.SolarCellProdChart, function (element) {
+        return element.Angle == CurrentAngle;
+      });
+      if (tmpList.length === 1) {
+        PageData.CurrentAngle = tmpList[0].Angle;
+        populateCurrentAngle();
+        updateCurrentProd();
+      }
+    }
+
+    function populateCurrentAngle() {
+      $('#CurrentAngle').val(PageData.CurrentAngle);
+      var array = PageData.SolarCellProdChart;
+      for (var index = 0; index < array.length; index++) {
+        var element = array[index];
+        if (element.Angle == PageData.CurrentAngle) {
+          $('#CurrentTime').val(element.Time);
+          setSunPosition();
+        }
+      }
+    }
+
+    function setSunPosition() {
+      var grass = $('img.grass')[0];
+      var zeroy = grass.clientHeight;
+      var zerox = grass.clientWidth / 2;
+      var radius = zerox * 0.9;
+      var CurrentAngleInRad = (Math.PI / 180) * (PageData.CurrentAngle - 90);
+
+      var CanvasHeight = PageData.height - (zeroy < 110 ? 110 : zeroy);
+      var CanvasWidth = grass.clientWidth;
+
+      $('#myCanvas').attr({
+        height: CanvasHeight,
+        width: CanvasWidth
+      });
+
+      $('#solarcellpanelcontainer').attr({
+        height: zeroy,
+        width: CanvasWidth
+      })
+
+      var CanvasRatio = CanvasWidth / CanvasHeight;
+      var c = document.getElementById("myCanvas");
+      var ctx = c.getContext("2d");
+      var grd = ctx.createLinearGradient(150.000, 0.000, 150.000, 300.000);
+
+      // Add colors
+      grd.addColorStop(0.000, 'rgba(58, 139, 192, 1.000)');
+      grd.addColorStop(0.996, 'rgba(226, 238, 245, 1.000)');
+
+      // Fill with gradient
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, CanvasWidth, CanvasHeight);
+      var CanvasCircleRadius = (CanvasRatio < 2) ? (CanvasWidth / 2) * 0.9 : CanvasHeight * 0.9;
+      PageData.CurrentSunX = (CanvasCircleRadius * Math.sin(CurrentAngleInRad)) + zerox;
+      PageData.CurrentSunY = (CanvasCircleRadius * Math.cos(CurrentAngleInRad)) + zeroy;
+      $('#sun').css({
+        left: PageData.CurrentSunX,
+        bottom: PageData.CurrentSunY
+      });
+
+      var StartAngleInRad = (Math.PI / 180) * (0 - 270);
+      var EndAngleInRad = (Math.PI / 180) * (Math.PI / 180) * (180 - 270);
+      var CenterCoord = {
+        x: CanvasWidth / 2,
+        y: CanvasHeight
+      }
+      var StartCoords = {
+        x: (CanvasCircleRadius * Math.sin(StartAngleInRad)) + CenterCoord.x,
+        y: (CanvasCircleRadius * Math.cos(StartAngleInRad)) + CenterCoord.y
+      }
+
+      var EndCoords = {
+        x: (CanvasCircleRadius * Math.sin(EndAngleInRad)) + CenterCoord.x,
+        y: (CanvasCircleRadius * Math.cos(EndAngleInRad)) + CenterCoord.y
+      }
+      ctx.beginPath();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#ffd263";
+      ctx.arc(CenterCoord.x, CenterCoord.y, CanvasCircleRadius, 0, 2 * Math.PI);
+      ctx.stroke();
+      for (var index = 0; index <= 180; index += 15) {
+        var currentangle = (Math.PI / 180) * (index - 270);
+        ctx.moveTo(CenterCoord.x, CenterCoord.y);
+        // ctx.movTo(0,0);
+        var CurrentX = (CanvasCircleRadius * Math.sin(currentangle)) + CenterCoord.x
+        var CurrentY = (CanvasCircleRadius * Math.cos(currentangle)) + CenterCoord.y;
+
+        ctx.beginPath();
+        ctx.fillStyle = "#ffffff";
+        ctx.arc(CurrentX, CurrentY, 13, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = "#ffd263";
+        ctx.arc(CurrentX, CurrentY, 10, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      $('#solarcellpanelcontainer').css({
+        bottom: zeroy / 2,
+      });
+
+      var c2 = document.getElementById("solarcellpanelcontainer");
+      var ctx2 = c2.getContext("2d");
+      ctx2.beginPath();
+      ctx2.moveTo(CanvasWidth / 2, zeroy);
+      ctx2.lineTo(CanvasWidth / 2, zeroy / 2);
+      ctx2.lineWidth = 5;
+      ctx2.stroke();
+      ctx2.closePath();
+      var currentAngle = PageData.CurrentAngle;
+      if (currentAngle == 0) {
+        currentAngle = 5;
+      } else if (currentAngle == 180) {
+        currentAngle = 175;
+      }
+      var PanelAngleStart = (Math.PI / 180) * (currentAngle);
+      var PanelAngleEnd = (Math.PI / 180) * (currentAngle - 180);
+      var PanelCoords = {
+        Start: {
+          x: 0,
+          y: 0
+        },
+        End: {
+          x: 0,
+          y: 0
+        }
+      }
+
+      var ExtraArea = PageData.CurrentArea * 0;
+      // console.log(ExtraArea)
+      //       if (ExtraArea > 0) {
+      PanelCoords.Start.x = ((((zeroy / 2) * 2 / 3) + ExtraArea) * Math.sin(PanelAngleStart)) + (CanvasWidth / 2)
+      PanelCoords.Start.y = ((((zeroy / 2) * 2 / 3) + ExtraArea) * Math.cos(PanelAngleStart)) + (zeroy / 2)
+      PanelCoords.End.x = ((((zeroy / 2) * 2 / 3) + ExtraArea) * Math.sin(PanelAngleEnd)) + (CanvasWidth / 2)
+      PanelCoords.End.y = ((((zeroy / 2) * 2 / 3) + ExtraArea) * Math.cos(PanelAngleEnd)) + (zeroy / 2)
+
+      ctx2.beginPath();
+      // ctx2.lineWidth = 9;
+      ctx2.moveTo(PanelCoords.End.x, PanelCoords.Start.y);
+      ctx2.lineTo(PanelCoords.End.x, PanelCoords.Start.y - 15);
+      ctx2.lineTo(PanelCoords.Start.x, PanelCoords.End.y - 15);
+      ctx2.lineTo(PanelCoords.Start.x, PanelCoords.End.y);
+      // ctx2.stroke();
+      ctx2.fillStyle = "#373C8A"
+      ctx2.closePath();
+      ctx2.fill();
+      ctx2.beginPath();
+      ctx2.moveTo(PanelCoords.End.x, PanelCoords.Start.y);
+      ctx2.lineTo(PanelCoords.End.x, PanelCoords.Start.y - 15);
+      ctx2.lineTo(PanelCoords.Start.x, PanelCoords.End.y - 15);
+      ctx2.lineTo(PanelCoords.Start.x, PanelCoords.End.y);
+      ctx2.strokeStyle = "#000000"
+      ctx2.lineWidth = 1;
+      ctx2.stroke();
+      ctx2.closePath();
+
+      ctx2.beginPath();
+      ctx2.moveTo(PanelCoords.End.x, PanelCoords.Start.y);
+      ctx2.lineTo(PanelCoords.Start.x, PanelCoords.End.y);
+      ctx2.strokeStyle = "#000000"
+      ctx2.lineWidth = 3;
+      ctx2.stroke();
+      ctx2.closePath();
+
+
+      ctx2.beginPath();
+      ctx2.fillStyle = 'rgba(0,0,0,0.5)';
+
+      switch (PageData.CurrentAngle) {
+        case 0:
+          ctx2.fillRect(CanvasWidth / 2, zeroy - 16, CanvasWidth / 2, 16);
+          break;
+        case 15:
+          ctx2.fillRect(CanvasWidth / 2, zeroy - 16, (CanvasWidth / 3), 16);
+          break;
+        case 30:
+          ctx2.fillRect(CanvasWidth / 2, zeroy - 16, (CanvasWidth / 4), 16);
+          break;
+        case 45:
+          ctx2.fillRect(CanvasWidth / 2, zeroy - 16, (CanvasWidth / 5), 16);
+          break;
+        case 60:
+          ctx2.fillRect(CanvasWidth / 2, zeroy - 16, (CanvasWidth / 6), 16);
+          break;
+        case 75:
+          ctx2.fillRect((CanvasWidth / 2 - 20), zeroy - 16, (CanvasWidth / 7), 16);
+          break;
+        case 90:
+          ctx2.fillRect(PanelCoords.End.x, zeroy - 16, zeroy * 2 / 3, 16)
+          break;
+        case 105:
+          ctx2.fillRect((CanvasWidth / 2 + 20) - (CanvasWidth / 7), zeroy - 16, (CanvasWidth / 7), 16);
+          break;
+        case 120:
+          ctx2.fillRect((CanvasWidth / 2) - (CanvasWidth / 6), zeroy - 16, (CanvasWidth / 6), 16);
+          break;
+        case 135:
+          ctx2.fillRect((CanvasWidth / 2) - (CanvasWidth / 5), zeroy - 16, (CanvasWidth / 5), 16);
+          break;
+        case 150:
+          ctx2.fillRect((CanvasWidth / 2) - (CanvasWidth / 4), zeroy - 16, (CanvasWidth / 4), 16);
+          break;
+        case 165:
+          ctx2.fillRect((CanvasWidth / 2) - (CanvasWidth / 3), zeroy - 16, (CanvasWidth / 3), 16);
+          break;
+        case 180:
+          ctx2.fillRect(0, zeroy - 16, (CanvasWidth / 2), 16);
+          break;
+        default:
+
+      }
+      ctx2.closePath();
+      // }
+
+      // sun.setAttribute("style", "left: " + sunx + "px; bottom: " +suny + "px");
+
+      /*
+      float x = r*cos(t) + h;
+      float y = r*sin(t) + k;
+      */
+    }
+
+    function populateCurrentArea() {
+      $('#Area').val(PageData.CurrentArea);
+      setSunPosition();
+    }
+
+    function updateArea(event) {
+      PageData.CurrentArea = $('#AreaSlider').val();
+      populateCurrentArea();
+      updateCurrentProd();
+    }
+
+    function updateEffect(event) {
+      PageData.CurrentEffect = $('#EffectSlider').val();
+      populateCurrentEffect();
+      updateCurrentProd();
+    }
+
+
+    function populateCurrentEffect() {
+      $('#Effect').val(PageData.CurrentEffect + ' % ');
+    }
+
+    function updateCurrentProd() {
+      var CurrentAngleInRad = PageData.CurrentAngle * (Math.PI / 180);
+      PageData.CurrentProd = Math.round(800 * PageData.CurrentArea * (PageData.CurrentEffect / 100) * Math.sin(
+        CurrentAngleInRad));
+      populateCurrentProd();
+    }
+
+    function populateCurrentProd() {
+      $('#CurrentProdText').val(PageData.CurrentProd + ' W ');
+
+      if (PageData.CurrentUsage > PageData.CurrentProd) {
+        $('#CurrentProdText').addClass('red').removeClass('green');
+      } else {
+        $('#CurrentProdText').addClass('green').removeClass('red');
+
+      }
+    }
+
+    function populateCurrentUsage() {
+      $('#inputTotalUsage').val(PageData.CurrentUsage + ' W ');
+      populateCurrentProd();
+    }
+
+    function populateItemList() {
+      var _html = "";
+
+      var TotalUsage = 0;
+      var array = PageData.SolarCellUsageItems;
+      var CountListItems = array.length;
+      var HeightToUse = PageData.MobileMode ? (PageData.width > PageData.height) ? PageData.height : PageData.width :
+        PageData.height;
+      var AvgHeight = HeightToUse / CountListItems;
+
+      for (var index = 0; index < array.length; index++) {
+        var element = array[index];
+
+        _html += '<li class="ListItem';
+
+        if (element.Checked == true) {
+          _html += " active";
+          TotalUsage += Number(element.Forbruk);
+        }
+
+        _html += '">';
+        _html += '<div class="Checkbox">';
+        _html += '<input type="checkbox" id="listitem-' + element.Id + '"';
+
+        if (element.Checked == true) {
+          _html += ' checked="checked"';
+        }
+
+        _html += ' /> <span class="ItemList' + element.Id + '"></span>';
+        _html += '</div>';
+        _html += '<div class="Image">';
+        _html += '<img src="' + element.Bilde + '">';
+        _html += '</div>';
+        _html += '<div class="Usage">';
+        _html += element.Forbruk + 'W';
+        _html += '</div>';
+        _html += '</li>';
+      }
+
+      if (PageData.CurrentUsage != TotalUsage) {
+        PageData.CurrentUsage = TotalUsage;
+        $('body').trigger('updateTotalUsage');
+
+      };
+
+
+      $('#ULItemList').html(_html);
+      $('#ULItemList > .ListItem').css({
+        height: AvgHeight
+      });
+      setDefaultLanguage(PageData.DefaultLang);
+      $('#ULItemList li').click(function (event) {
+        event.preventDefault();
+        var array = PageData.SolarCellUsageItems;
+        var currentid = Number($(this).find('input[type="checkbox"]').attr('id').split('-')[1]);
+        for (var index = 0; index < array.length; index++) {
+          var element = array[index];
+          if (currentid == element.Id) {
+            selectThisItem(element);
+          }
+        }
+      })
+    }
+
+    function selectThisItem(item) {
+      var NewItem = item;
+      NewItem.Checked = !NewItem.Checked;
+      $('body').trigger('updateList');
+    }
+  </script>
+</body>
+
+</html>
