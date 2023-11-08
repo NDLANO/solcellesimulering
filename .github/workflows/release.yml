@@ -10,9 +10,9 @@ env:
   COMPONENT: ${{ github.event.repository.name }}
 jobs:
   release:
-    name: 'Build and push to bucket'
+    name: Build and push to bucket
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: 'Release'
-        run: aws s3 cp . s3://statisk.test.ndla.no/simulering/$COMPONENT/ --recursive
+      - name: Release
+        run: aws s3 cp . s3://statisk.test.ndla.no/simulering/$COMPONENT/ --recursive --exclude ".git/*"
